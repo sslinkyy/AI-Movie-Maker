@@ -142,7 +142,10 @@ def handle_run(ns):
         value: Any = ns.value
         numeric = {"width", "height", "fps", "duration_frames"}
         if field in numeric:
-            value = int(value)
+            try:
+                value = int(value)
+            except ValueError:
+                raise ValueError(f"Value for '{field}' must be an integer.")
         if field == "transition_to_next" and value == "none":
             value = None
         app.update_shot_settings(ns.shot_id, **{field: value})
