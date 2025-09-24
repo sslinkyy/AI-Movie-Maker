@@ -15,3 +15,7 @@ MODELS_DIR = BASE_DIR / "models"
 COMFYUI_DIR = BIN_DIR / ("ComfyUI_windows_portable" if OS_TYPE == "windows" else "ComfyUI")
 COMFYUI_URL = "http://127.0.0.1:8188"
 OUTPUT_DIR = BASE_DIR / "output"
+
+# Default model names used by the renderer
+ANIMATEDIFF_CHECKPOINT = "v1-5-pruned-emaonly.ckpt"
+ANIMATEDIFF_MOTION_MODEL = "mm_sd_v15_v2.ckpt"

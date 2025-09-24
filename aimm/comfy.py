@@ -42,17 +42,19 @@ def start_comfy() -> Optional[subprocess.Popen[str]]:
     raise RuntimeError("Timed out waiting for ComfyUI to start")
 
 
-def comfy_queue(prompt_workflow: Dict) -> Optional[Dict]:
+def comfy_queue(prompt_workflow: Dict) -> Dict:
     try:
         response = requests.post(f"{COMFYUI_URL}/prompt", json={"prompt": prompt_workflow}, timeout=30)
         response.raise_for_status()
         prompt_id = response.json()["prompt_id"]
-        for _ in range(300):  # 5-minute timeo
-            history = requests.get(f"{COMFYUI_URL}/history/{prompt_id}", timeout=30).json()
-            if prompt_id in history and history[prompt_id].get("outputs"):
-                return history[prompt_id]["outputs"]
+        for _ in range(600):  # Wait for up to 10 minutes
+            history_response = requests.get(f"{COMFYUI_URL}/history/{prompt_id}", timeout=30)
+            history_response.raise_for_status()
+            history = history_response.json()
+            outputs = history.get(prompt_id, {}).get("outputs")
+            if outputs:
+                return outputs
             time.sleep(1)
         raise RuntimeError(f"Timed out waiting for ComfyUI prompt {prompt_id}")
-    except Exception as exc:  # pragma: no cover - network heavy
-        print(f"[comfy_queue] {exc}")
-        return None
+    except requests.RequestException as exc:  # pragma: no cover - network heavy
+        raise RuntimeError(f"ComfyUI request failed: {exc}") from exc

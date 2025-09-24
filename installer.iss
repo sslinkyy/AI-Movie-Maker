@@ -56,10 +56,15 @@ Type: filesandordirs; Name: "{localappdata}\{#AppName}"
 [Code]
 const
   FfmpegUrl = 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip';
+  FfmpegSha256 = 'd6f787e91c785d012450375f0a2d54e4719463c261e1b12361d007f4369527f4';
   RifeUrl = 'https://github.com/nihui/rife-ncnn-vulkan/releases/download/20221029/rife-ncnn-vulkan-20221029-windows.zip';
+  RifeSha256 = 'd8e4d772d26cd8006ef0ad0bc82eb191b53c68677d1ae2f42506d74cbbbea606';
   RealesrganUrl = 'https://github.com/xinntao/Real-ESRGAN-ncnn-vulkan/releases/download/v0.2.0/realesrgan-ncnn-vulkan-v0.2.0-windows.zip';
+  RealesrganSha256 = '1bbbdb12d470af80b035c773682e144c6c2f6ece9210832a289af0a48ce3fa9a';
   WkhtmlUrl = 'https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox-0.12.6-1.mxe-cross-win64.7z';
+  WkhtmlSha256 = '6ce994c89d5f6018fa158e149a2de8fbbbeb14d8ff5cb656c89893bc556e0557';
   ComfyUrl = 'https://github.com/YanWenKun/ComfyUI-Windows-Portable/releases/download/20250816/ComfyUI_Windows_Portable_Nvidia.zip';
+  ComfySha256 = '0f43a033c4695013e7ac06e902b4d8e57e9375497400d463e271a364175b9f87';
 
 var
   ComboFfmpeg: TNewComboBox;
@@ -136,8 +141,7 @@ end;
 function VerifySha256(const FileName, ExpectedHash: string): Boolean;
 var
   Script: string;
-  ResultCode: Integer;
-  Command: string;
+
   TempFile: string;
   Output: string;
 begin
@@ -147,15 +151,13 @@ begin
     Exit;
   end;
   TempFile := ExpandConstant('{tmp}\hash.txt');
-  Command := '-NoProfile -ExecutionPolicy Bypass -Command "Get-FileHash -Path ''{#replace(FileName, '\\', '\\\\')}'' -Algorithm SHA256 | Select-Object -ExpandProperty Hash"';
-  Result := Exec('powershell.exe', Command, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
-  if Result then
-  begin
-    if LoadStringFromFile(TempFile, Output) then
-      Result := CompareText(Trim(Output), ExpectedHash) = 0
-    else
-      Result := True;
-  end;
+  Script := Format('Get-FileHash -Path ''%s'' -Algorithm SHA256 | Select-Object -ExpandProperty Hash | Set-Content -Path ''%s''',
+    [FileName, TempFile]);
+  Result := RunPowerShell(Script);
+  if Result and LoadStringFromFile(TempFile, Output) then
+    Result := CompareText(Trim(Output), ExpectedHash) = 0
+  else if Result then
+    Result := False;
 end;
 
 function ExpandArchive(const Archive, Dest: string): Boolean;
@@ -192,7 +194,7 @@ begin
   BatFile := ExpandConstant('{app}\run.bat');
   Lines := TStringList.Create;
   try
-    PythonExe := ExpandConstant('{app}\bin\ComfyUI_windows_portable\python_embeded\python.exe');
+    PythonExe := ExpandConstant('{app}\bin\ComfyUI_windows_portable\python_embedded\python.exe');
     Lines.Add('@echo off');
     Lines.Add('setlocal');
     Lines.Add('set APPDIR=%~dp0');
@@ -229,25 +231,46 @@ begin
     ComfyZip := ExpandConstant('{tmp}\comfyui.zip');
     if DownloadFileWithRetry(ComfyUrl, ComfyZip, 3) then
     begin
+      if not VerifySha256(ComfyZip, ComfySha256) then
+      begin
+        MsgBox('ComfyUI download failed integrity verification.', mbError, MB_OK);
+        Abort;
+      end;
       ForceDirectories(BinDir + '\\ComfyUI_windows_portable');
       ExpandArchive(ComfyZip, BinDir + '\\ComfyUI_windows_portable');
-    end;
+    end
+    else if not SilentAll then
+      MsgBox('Unable to download ComfyUI package.', mbError, MB_OK);
 
     FfmpegZip := ExpandConstant('{tmp}\ffmpeg.zip');
     if DownloadFileWithRetry(FfmpegUrl, FfmpegZip, 3) then
     begin
+\      if not VerifySha256(FfmpegZip, FfmpegSha256) then
+      begin
+        MsgBox('FFmpeg download failed integrity verification.', mbError, MB_OK);
+        Abort;
+      end;
       ForceDirectories(BinDir + '\\ffmpeg');
       ExpandArchive(FfmpegZip, BinDir + '\\ffmpeg');
-    end;
+    end
+    else if not SilentAll then
+      MsgBox('Unable to download FFmpeg package.', mbError, MB_OK);
 
     if WizardIsTaskSelected('downloadrife') then
     begin
       RifeZip := ExpandConstant('{tmp}\rife.zip');
       if DownloadFileWithRetry(RifeUrl, RifeZip, 3) then
       begin
+        if not VerifySha256(RifeZip, RifeSha256) then
+        begin
+          MsgBox('RIFE download failed integrity verification.', mbError, MB_OK);
+          Abort;
+        end;
         ForceDirectories(BinDir + '\\rife');
         ExpandArchive(RifeZip, BinDir + '\\rife');
-      end;
+      end
+      else if not SilentAll then
+        MsgBox('Unable to download RIFE package.', mbError, MB_OK);
     end;
 
     if WizardIsTaskSelected('downloadrealesrgan') then
@@ -255,9 +278,16 @@ begin
       EsrganZip := ExpandConstant('{tmp}\realesrgan.zip');
       if DownloadFileWithRetry(RealesrganUrl, EsrganZip, 3) then
       begin
+        if not VerifySha256(EsrganZip, RealesrganSha256) then
+        begin
+          MsgBox('Real-ESRGAN download failed integrity verification.', mbError, MB_OK);
+          Abort;
+        end;
         ForceDirectories(BinDir + '\\realesrgan');
         ExpandArchive(EsrganZip, BinDir + '\\realesrgan');
-      end;
+      end
+      else if not SilentAll then
+        MsgBox('Unable to download Real-ESRGAN package.', mbError, MB_OK);
     end;
 
     if WizardIsTaskSelected('downloadwkhtml') then
@@ -265,11 +295,18 @@ begin
       Wkhtml7z := ExpandConstant('{tmp}\wkhtml.7z');
       if DownloadFileWithRetry(WkhtmlUrl, Wkhtml7z, 3) then
       begin
+        if not VerifySha256(Wkhtml7z, WkhtmlSha256) then
+        begin
+          MsgBox('wkhtmltopdf download failed integrity verification.', mbError, MB_OK);
+          Abort;
+        end;
         Exec('powershell.exe', '-NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -LiteralPath ''" + Wkhtml7z + "'' -DestinationPath ''" + BinDir + "\\wkhtmltopdf'' -Force"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-      end;
+      end
+      else if not SilentAll then
+        MsgBox('Unable to download wkhtmltopdf package.', mbError, MB_OK);
     end;
 
-    PythonExe := ExpandConstant('{app}\bin\ComfyUI_windows_portable\python_embeded\python.exe');
+    PythonExe := ExpandConstant('{app}\bin\ComfyUI_windows_portable\python_embedded\python.exe');
     InstallRequirements(PythonExe);
 
     CreateRunScript();

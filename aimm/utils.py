@@ -68,9 +68,7 @@ def comfyui_run_script() -> Optional[list[str]]:
         if cpu.exists():
             return [str(cpu)]
         return None
-    python_exe = COMFYUI_DIR / "python_embeded" / "python.exe"
-    if not python_exe.exists():
-        python_exe = COMFYUI_DIR / "venv" / "bin" / "python"
+    python_exe = COMFYUI_DIR / "venv" / "bin" / "python"
     main_py = COMFYUI_DIR / "main.py"
     if python_exe.exists() and main_py.exists():
         return [str(python_exe), str(main_py), "--listen"]

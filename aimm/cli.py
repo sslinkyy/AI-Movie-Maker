@@ -87,86 +87,112 @@ def main(argv: Optional[List[str]] = None) -> None:
     args = parser.parse_args(argv)
     app = AIMovieMaker()
 
-    if args.command == "init":
-        app.init_workspace()
-    elif args.command == "check":
-        app.check_dependencies()
-    elif args.command == "list":
-        app.list_projects()
-    elif args.command == "create":
-        app.create_project(args.name)
-    elif args.command == "load":
-        app.load_project(args.name)
-    elif args.command == "sync-script":
-        app.load_project(args.name)
-        script_text = Path(args.script_file).read_text(encoding="utf-8")
+    def with_project(handler):
+        def wrapper(ns):
+            app.load_project(ns.name)
+            return handler(ns)
+
+        return wrapper
+
+    def handle_sync_script(ns):
+        script_text = Path(ns.script_file).read_text(encoding="utf-8")
         app.sync_script(script_text)
-    elif args.command == "gen-keyframes":
-        app.load_project(args.name)
-        app.generate_keyframes()
-    elif args.command == "run":
-        app.load_project(args.name)
-        target = args.target
-        if target == "project":
-            app.render_project()
-        elif target.startswith("scene:"):
+
+def handle_run(ns):
+    target = ns.target
+    if target == "project":
+        app.render_project()
+    elif target.startswith("scene:"):
+        try:
             scene_number = int(target.split(":", 1)[1])
             app.render_scene(scene_number)
-        elif target.startswith("shot:"):
+        except (ValueError, IndexError):
+            raise ValueError("Invalid scene format. Use scene:<number>.")
+    elif target.startswith("shot:"):
+        try:
             shot_id = int(target.split(":", 1)[1])
             app.render_shot(shot_id)
-        else:
-            raise ValueError("Unknown target. Use project, scene:<n>, or shot:<id>.")
-    elif args.command == "export":
-        app.load_project(args.name)
-        app.export(args.format)
-    elif args.command == "export-pdf":
-        app.load_project(args.name)
-        app.export_pdf(Path(args.destination))
-    elif args.command == "save-project":
-        app.load_project(args.name)
-        app.save_project_as(Path(args.destination))
-    elif args.command == "load-project":
-        app.load_project_from_zip(Path(args.archive))
-    elif args.command == "share":
-        app.load_project(args.name)
+        except (ValueError, IndexError):
+            raise ValueError("Invalid shot format. Use shot:<id>.")
+    else:
+        raise ValueError("Unknown target. Use project, scene:<n>, or shot:<id>.")
+
+    def handle_export(ns):
+        app.export(ns.format)
+
+    def handle_export_pdf(ns):
+        app.export_pdf(Path(ns.destination))
+
+    def handle_save_project(ns):
+        app.save_project_as(Path(ns.destination))
+
+    def handle_share(ns):
         url = app.share_project_stub()
         print(f"Share link: {url}")
-    elif args.command == "fetch-share":
-        path = app.fetch_shared_project_stub(args.url)
-        print(f"Fetched shared project placeholder at {path}")
-    elif args.command == "storyboard":
-        app.load_project(args.name)
+
+    def handle_storyboard(ns):
+
         for entry in app.storyboard():
             print(
                 f"Scene {entry['scene']}: {entry['scene_description']} | "
                 f"Shot {entry['shot_number']} ({entry['status']}): {entry['shot_description']}"
             )
-    elif args.command == "edit-shot":
-        app.load_project(args.name)
-        field = args.field.replace("-", "_")
-        value: Any = args.value
+
+    def handle_edit_shot(ns):
+        field = ns.field.replace("-", "_")
+        value: Any = ns.value
         numeric = {"width", "height", "fps", "duration_frames"}
         if field in numeric:
-            value = int(value)
+            try:
+                value = int(value)
+            except ValueError:
+                raise ValueError(f"Value for '{field}' must be an integer.")
         if field == "transition_to_next" and value == "none":
             value = None
-        app.update_shot_settings(args.shot_id, **{field: value})
-        print(f"Updated shot {args.shot_id}: {field}")
-    elif args.command == "voiceover":
-        app.load_project(args.name)
-        text = " ".join(args.text)
-        path = app.generate_voiceover(args.shot_id, text)
+        app.update_shot_settings(ns.shot_id, **{field: value})
+        print(f"Updated shot {ns.shot_id}: {field}")
+
+    def handle_voiceover(ns):
+        text = " ".join(ns.text)
+        path = app.generate_voiceover(ns.shot_id, text)
         print(f"Voiceover saved to {path}")
-    elif args.command == "captions":
-        app.load_project(args.name)
-        text = app.generate_captions(args.shot_id)
-        print(text)
-    elif args.command == "music-stub":
-        app.load_project(args.name)
-        path = app.generate_music_stub(args.scene)
+
+    def handle_captions(ns):
+        print(app.generate_captions(ns.shot_id))
+
+    def handle_music_stub(ns):
+        path = app.generate_music_stub(ns.scene)
         print(f"Music stub saved to {path}")
-    elif args.command == "gui" or args.command is None:
-        launch_gui(app)
-    else:
+
+    handlers = {
+        "init": lambda ns: app.init_workspace(),
+        "check": lambda ns: app.check_dependencies(),
+        "list": lambda ns: app.list_projects(),
+        "create": lambda ns: app.create_project(ns.name),
+        "load": lambda ns: app.load_project(ns.name),
+        "sync-script": with_project(handle_sync_script),
+        "gen-keyframes": with_project(lambda ns: app.generate_keyframes()),
+        "run": with_project(handle_run),
+        "export": with_project(handle_export),
+        "export-pdf": with_project(handle_export_pdf),
+        "save-project": with_project(handle_save_project),
+        "load-project": lambda ns: app.load_project_from_zip(Path(ns.archive)),
+        "share": with_project(handle_share),
+        "fetch-share": lambda ns: print(
+            f"Fetched shared project placeholder at {app.fetch_shared_project_stub(ns.url)}"
+        ),
+        "storyboard": with_project(handle_storyboard),
+        "edit-shot": with_project(handle_edit_shot),
+        "voiceover": with_project(handle_voiceover),
+        "captions": with_project(handle_captions),
+        "music-stub": with_project(handle_music_stub),
+        "gui": lambda ns: launch_gui(app),
+    }
+
+    command = args.command or "gui"
+    handler = handlers.get(command)
+    if not handler:
         parser.print_help()
+        return
+    handler(args)
+
