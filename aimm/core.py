@@ -422,7 +422,10 @@ class AudioProcessor:
         if "elevenlabs.client" not in sys.modules:
             raise ImportError("elevenlabs package required for voiceover generation")
         client = ElevenLabs(api_key=api_key)
-        audio_bytes = client.generate(text=text, voice="Rachel", model="eleven_multilingual_v2")
+        try:
+            audio_bytes = client.generate(text=text, voice="Rachel", model="eleven_multilingual_v2")
+        except Exception as exc:
+            raise RuntimeError(f"ElevenLabs API call failed: {exc}") from exc
         assets = project_path / "assets"
         assets.mkdir(exist_ok=True)
         raw_audio = assets / f"shot_{shot_id}_voiceover.mp3"
