@@ -562,6 +562,7 @@ class AIMovieMaker:
                 },
             }
         }
+
         outputs = comfy_queue(payload["prompt"])
         if outputs is None:
             raise RuntimeError("ComfyUI task failed or timed out.")
