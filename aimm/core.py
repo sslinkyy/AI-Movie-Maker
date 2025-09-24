@@ -562,15 +562,9 @@ class AIMovieMaker:
                 },
             }
         }
-        response = requests.post(f"{COMFYUI_URL}/prompt", json=payload, timeout=30)
-        response.raise_for_status()
-        prompt_id = response.json()["prompt_id"]
-        while True:
-            history = requests.get(f"{COMFYUI_URL}/history/{prompt_id}", timeout=30).json()
-            if prompt_id in history and history[prompt_id]["outputs"]:
-                break
-            time.sleep(1)
-        outputs = history[prompt_id]["outputs"]
+        outputs = comfy_queue(payload["prompt"])
+        if outputs is None:
+            raise RuntimeError("ComfyUI task failed or timed out.")
         gifs = outputs.get("17", {}).get("gifs", [])
         if not gifs:
             raise RuntimeError("ComfyUI did not return a GIF output")
