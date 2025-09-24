@@ -98,7 +98,7 @@ class AIMovieMaker:
         self._schema_checked: bool = False
         BASE_DIR.mkdir(parents=True, exist_ok=True)
         PROJECTS_DIR.mkdir(parents=True, exist_ok=True)
-        (BASE_DIR / "output").mkdir(parents=True, exist_ok=True)
+        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     # --- Workspace & dependency management -------------------------------------------------
     def init_workspace(self) -> None:
