@@ -47,11 +47,12 @@ def comfy_queue(prompt_workflow: Dict) -> Optional[Dict]:
         response = requests.post(f"{COMFYUI_URL}/prompt", json={"prompt": prompt_workflow}, timeout=30)
         response.raise_for_status()
         prompt_id = response.json()["prompt_id"]
-        while True:
+        for _ in range(300):  # 5-minute timeout
             history = requests.get(f"{COMFYUI_URL}/history/{prompt_id}", timeout=30).json()
             if prompt_id in history and history[prompt_id].get("outputs"):
                 return history[prompt_id]["outputs"]
             time.sleep(1)
+        raise RuntimeError(f"Timed out waiting for ComfyUI prompt {prompt_id}")
     except Exception as exc:  # pragma: no cover - network heavy
         print(f"[comfy_queue] {exc}")
         return None
