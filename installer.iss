@@ -141,6 +141,7 @@ end;
 function VerifySha256(const FileName, ExpectedHash: string): Boolean;
 var
   Script: string;
+
   TempFile: string;
   Output: string;
 begin
@@ -244,7 +245,7 @@ begin
     FfmpegZip := ExpandConstant('{tmp}\ffmpeg.zip');
     if DownloadFileWithRetry(FfmpegUrl, FfmpegZip, 3) then
     begin
-      if not VerifySha256(FfmpegZip, FfmpegSha256) then
+\      if not VerifySha256(FfmpegZip, FfmpegSha256) then
       begin
         MsgBox('FFmpeg download failed integrity verification.', mbError, MB_OK);
         Abort;

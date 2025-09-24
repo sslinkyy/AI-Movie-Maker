@@ -131,6 +131,7 @@ def handle_run(ns):
         print(f"Share link: {url}")
 
     def handle_storyboard(ns):
+
         for entry in app.storyboard():
             print(
                 f"Scene {entry['scene']}: {entry['scene_description']} | "
@@ -194,3 +195,4 @@ def handle_run(ns):
         parser.print_help()
         return
     handler(args)
+
