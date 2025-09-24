@@ -115,4 +115,3 @@ CLI output prints to stdout/stderr. ComfyUI logs live under `~/.ai_movie_maker/b
 ## Support & Contributions
 
 Please open issues or pull requests if you encounter bugs, need installer tweaks, or want to contribute enhancements. Include detailed logs and reproduction steps to help triage quickly.
-

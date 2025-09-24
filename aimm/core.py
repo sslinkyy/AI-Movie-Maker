@@ -98,7 +98,7 @@ class AIMovieMaker:
         self._schema_checked: bool = False
         BASE_DIR.mkdir(parents=True, exist_ok=True)
         PROJECTS_DIR.mkdir(parents=True, exist_ok=True)
-        (BASE_DIR / "output").mkdir(parents=True, exist_ok=True)
+        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     # --- Workspace & dependency management -------------------------------------------------
     def init_workspace(self) -> None:
@@ -107,7 +107,7 @@ class AIMovieMaker:
         MODELS_DIR.mkdir(exist_ok=True)
         print(f" Workspace: {BASE_DIR}")
         print(" Downloading base models via setup_models.py if available …")
-        setup_script = Path(__file__).with_name("setup_models.py")
+        setup_script = Path(__file__).parent.parent / "setup_models.py"
         if setup_script.exists():
             try:
                 safe_subprocess([sys.executable, str(setup_script), "--auto"], cwd=setup_script.parent)
@@ -562,15 +562,10 @@ class AIMovieMaker:
                 },
             }
         }
-        response = requests.post(f"{COMFYUI_URL}/prompt", json=payload, timeout=30)
-        response.raise_for_status()
-        prompt_id = response.json()["prompt_id"]
-        while True:
-            history = requests.get(f"{COMFYUI_URL}/history/{prompt_id}", timeout=30).json()
-            if prompt_id in history and history[prompt_id]["outputs"]:
-                break
-            time.sleep(1)
-        outputs = history[prompt_id]["outputs"]
+
+        outputs = comfy_queue(payload["prompt"])
+        if outputs is None:
+            raise RuntimeError("ComfyUI task failed or timed out.")
         gifs = outputs.get("17", {}).get("gifs", [])
         if not gifs:
             raise RuntimeError("ComfyUI did not return a GIF output")
