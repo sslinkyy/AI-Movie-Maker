@@ -2,6 +2,7 @@
 
 AI Movie Maker is a modular Python application anchored by the `ai_movie_maker.py` entrypoint and a supporting `aimm/` package. It combines a command line interface and a Gradio GUI to orchestrate AI-assisted storyboarding, animation, and video production workflows. The tool coordinates Stable Diffusion / AnimateDiff rendering through ComfyUI, automates voiceovers and captions, keeps project state in SQLite, and exports final edits with moviepy-powered transitions. This repository also contains a Windows installer definition and helper scripts for dependency bootstrapping.
 
+
 ## Key Capabilities
 
 * **Hybrid CLI + GUI** – Drive the entire workflow from scripted commands or through a multi-tab Gradio interface that covers setup, scripting, keyframe planning, shot controls, audio tools, rendering, review, and collaboration.
@@ -17,6 +18,7 @@ AI Movie Maker is a modular Python application anchored by the `ai_movie_maker.p
 | --- | --- |
 | `ai_movie_maker.py` | Lightweight entry script that dispatches to the CLI. |
 | `aimm/` | Package containing modular components (`core.py`, `gui.py`, `cli.py`, and helpers). |
+
 | `requirements.txt` | Python packages required by the app and installer. |
 | `setup_models.py` | Hugging Face download helper invoked during workspace setup. |
 | `installer.iss` | Inno Setup script that produces `AI_Movie_Maker_Setup.exe` on Windows. |
@@ -116,3 +118,5 @@ CLI output prints to stdout/stderr. ComfyUI logs live under `~/.ai_movie_maker/b
 
 Please open issues or pull requests if you encounter bugs, need installer tweaks, or want to contribute enhancements. Include detailed logs and reproduction steps to help triage quickly.
 
+This repository contains the source code and installer assets for **AI Movie Maker v1.3.2**,
+a cross-platform CLI + GUI application for AI-assisted storyboarding and video creation.
