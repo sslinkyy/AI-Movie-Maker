@@ -98,18 +98,24 @@ def main(argv: Optional[List[str]] = None) -> None:
         script_text = Path(ns.script_file).read_text(encoding="utf-8")
         app.sync_script(script_text)
 
-    def handle_run(ns):
-        target = ns.target
-        if target == "project":
-            app.render_project()
-        elif target.startswith("scene:"):
+def handle_run(ns):
+    target = ns.target
+    if target == "project":
+        app.render_project()
+    elif target.startswith("scene:"):
+        try:
             scene_number = int(target.split(":", 1)[1])
             app.render_scene(scene_number)
-        elif target.startswith("shot:"):
+        except (ValueError, IndexError):
+            raise ValueError("Invalid scene format. Use scene:<number>.")
+    elif target.startswith("shot:"):
+        try:
             shot_id = int(target.split(":", 1)[1])
             app.render_shot(shot_id)
-        else:
-            raise ValueError("Unknown target. Use project, scene:<n>, or shot:<id>.")
+        except (ValueError, IndexError):
+            raise ValueError("Invalid shot format. Use shot:<id>.")
+    else:
+        raise ValueError("Unknown target. Use project, scene:<n>, or shot:<id>.")
 
     def handle_export(ns):
         app.export(ns.format)
