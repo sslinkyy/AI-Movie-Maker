@@ -107,7 +107,7 @@ class AIMovieMaker:
         MODELS_DIR.mkdir(exist_ok=True)
         print(f" Workspace: {BASE_DIR}")
         print(" Downloading base models via setup_models.py if available …")
-        setup_script = Path(__file__).with_name("setup_models.py")
+        setup_script = Path(__file__).parent.parent / "setup_models.py"
         if setup_script.exists():
             try:
                 safe_subprocess([sys.executable, str(setup_script), "--auto"], cwd=setup_script.parent)
