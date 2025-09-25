@@ -98,24 +98,33 @@ def main(argv: Optional[List[str]] = None) -> None:
         script_text = Path(ns.script_file).read_text(encoding="utf-8")
         app.sync_script(script_text)
 
-def handle_run(ns):
-    target = ns.target
-    if target == "project":
-        app.render_project()
-    elif target.startswith("scene:"):
-        try:
-            scene_number = int(target.split(":", 1)[1])
-            app.render_scene(scene_number)
-        except (ValueError, IndexError):
-            raise ValueError("Invalid scene format. Use scene:<number>.")
-    elif target.startswith("shot:"):
-        try:
-            shot_id = int(target.split(":", 1)[1])
-            app.render_shot(shot_id)
-        except (ValueError, IndexError):
-            raise ValueError("Invalid shot format. Use shot:<id>.")
-    else:
-        raise ValueError("Unknown target. Use project, scene:<n>, or shot:<id>.")
+    def handle_run(ns):
+        target = ns.target
+        if target == "project":
+            app.render_project()
+            return
+
+        def _parse_numeric(prefix: str) -> Optional[int]:
+            value = target.split(":", 1)[1].strip() if ":" in target else ""
+            if not value:
+                print(f"Invalid {prefix} target. Expected {prefix}:<number>.")
+                return None
+            try:
+                return int(value)
+            except ValueError:
+                print(f"Invalid {prefix} target '{value}'. It must be an integer.")
+                return None
+
+        if target.startswith("scene:"):
+            scene_number = _parse_numeric("scene")
+            if scene_number is not None:
+                app.render_scene(scene_number)
+        elif target.startswith("shot:"):
+            shot_id = _parse_numeric("shot")
+            if shot_id is not None:
+                app.render_shot(shot_id)
+        else:
+            print("Unknown target. Use project, scene:<n>, or shot:<id>.")
 
     def handle_export(ns):
         app.export(ns.format)
@@ -131,7 +140,6 @@ def handle_run(ns):
         print(f"Share link: {url}")
 
     def handle_storyboard(ns):
-
         for entry in app.storyboard():
             print(
                 f"Scene {entry['scene']}: {entry['scene_description']} | "
@@ -143,10 +151,7 @@ def handle_run(ns):
         value: Any = ns.value
         numeric = {"width", "height", "fps", "duration_frames"}
         if field in numeric:
-            try:
-                value = int(value)
-            except ValueError:
-                raise ValueError(f"Value for '{field}' must be an integer.")
+            value = int(value)
         if field == "transition_to_next" and value == "none":
             value = None
         app.update_shot_settings(ns.shot_id, **{field: value})
@@ -195,4 +200,3 @@ def handle_run(ns):
         parser.print_help()
         return
     handler(args)
-

@@ -47,7 +47,7 @@ def comfy_queue(prompt_workflow: Dict) -> Dict:
         response = requests.post(f"{COMFYUI_URL}/prompt", json={"prompt": prompt_workflow}, timeout=30)
         response.raise_for_status()
         prompt_id = response.json()["prompt_id"]
-        for _ in range(600):  # Wait for up to 10 minutes
+        while True:
             history_response = requests.get(f"{COMFYUI_URL}/history/{prompt_id}", timeout=30)
             history_response.raise_for_status()
             history = history_response.json()
@@ -55,6 +55,5 @@ def comfy_queue(prompt_workflow: Dict) -> Dict:
             if outputs:
                 return outputs
             time.sleep(1)
-        raise RuntimeError(f"Timed out waiting for ComfyUI prompt {prompt_id}")
     except requests.RequestException as exc:  # pragma: no cover - network heavy
         raise RuntimeError(f"ComfyUI request failed: {exc}") from exc
